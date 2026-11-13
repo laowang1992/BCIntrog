@@ -1,0 +1,77 @@
+---
+title: "The Three-State HMM"
+output: rmarkdown::html_vignette
+vignette: >
+  %\VignetteIndexEntry{The Three-State HMM}
+  %\VignetteEngine{knitr::rmarkdown}
+  %\VignetteEncoding{UTF-8}
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(collapse = TRUE, comment = "#>")
+```
+
+# 状态与发射概率
+
+三个隐藏状态为 D（供体纯合）、R（轮回亲本纯合）和 H（杂合）。默认发射矩阵为：
+
+```{r emission}
+library(BCIntrog)
+emission_probability()
+```
+
+矩阵的行是真实状态，列是观测状态。每一行必须和为 1。用户可以通过 `emission`
+参数提供自定义矩阵；行和不为 1 的矩阵会报错，不会自动归一化。
+
+# 物理距离转移概率
+
+默认每 10 Mb 预期一次状态转换，即 `cross_length = 10,000,000`：
+
+```{r transition}
+transition_probability(distance = 1e6, cross_length = 1e7)
+```
+
+转移矩阵是对称的：对角线为 `1 - p`，非对角线各为 `p / 2`，其中
+`p = 1 - exp(-distance / cross_length)`。
+
+# Viterbi 与 Forward-Backward
+
+`run_hmm()` 对一条染色体运行 HMM，返回 Viterbi 路径和每个位点的后验概率。为了在很短的示例序列上清楚展示状态转换，下面使用一个诊断性更强的发射矩阵，并把 `cross_length` 设为 1000 bp（实际分析默认是 10 Mb）：
+
+```{r hmm-example}
+em <- matrix(
+  c(
+    0.98, 0.01, 0.01,
+    0.01, 0.98, 0.01,
+    0.01, 0.01, 0.98
+  ),
+  nrow = 3, byrow = TRUE,
+  dimnames = list(c("D", "R", "H"), c("D", "R", "H"))
+)
+
+h <- run_hmm(
+  pos = c(1000, 2000, 3000, 4000, 5000, 6000),
+  observations = c("D", "D", "H", "H", "R", "R"),
+  emission = em,
+  cross_length = 1000
+)
+h
+```
+
+在真实数据中，标记密度高、D/R/H 区块通常跨越很多标记，默认发射矩阵和 10 Mb 的 `cross_length` 可以稳定识别长片段。但由于默认 H 行是 0.40/0.40/0.20，H 状态对任何观测都有中等似然，在非常短或标记稀疏的序列中可能成为“保守”状态；解释短片段时应结合后验概率和置信度。
+
+# 缺失观测
+
+缺失观测（`NA`）的发射似然对所有状态都为 1，因此不偏向任何状态。长缺失区的状态由转移关系和两侧信息决定：
+
+```{r missing}
+h2 <- run_hmm(
+  pos = c(1000, 2000, 3000, 4000, 5000, 6000),
+  observations = c("D", NA, NA, NA, "R", "R"),
+  emission = em,
+  cross_length = 1000
+)
+h2
+```
+
+如果整条染色体所有观测都缺失，`run_hmm()` 给出 WARNING，并返回 `Viterbi = NA`、后验概率等于初始概率，不强行判定为某个遗传状态。

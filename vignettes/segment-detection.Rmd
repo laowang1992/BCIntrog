@@ -1,0 +1,75 @@
+---
+title: "Segment Detection"
+output: rmarkdown::html_vignette
+vignette: >
+  %\VignetteIndexEntry{Segment Detection}
+  %\VignetteEngine{knitr::rmarkdown}
+  %\VignetteEncoding{UTF-8}
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(collapse = TRUE, comment = "#>")
+```
+
+# 运行 HMM 并识别片段
+
+```{r segment}
+library(BCIntrog)
+vcf <- system.file("extdata", "Demo.vcf.gz", package = "BCIntrog")
+dat <- read_vcf(vcf)
+sites <- select_site(dat, "9172", "Y633", "WS100", GQ = 20)
+seg <- segment_detection(sites, min_length = 2e5)
+seg
+```
+
+片段表的主要列：
+
+- `Start`、`End`：1-based 闭区间；
+- `Length_bp = End - Start + 1`；
+- `SNP_number`：片段内标记数；
+- `Observed_SNP_number`：片段内非缺失基因型数；
+- `Viterbi`：D/R/H/NA；
+- `State`：供体名、轮回亲本名、`Heterozygous` 或 `Uninformative`。
+
+若某条染色体没有任何可用的后代基因型，会输出一个 `[1, L]` 的 `Uninformative`
+片段（`Viterbi = NA`），不会强行判定为 D/R/H。
+
+```{r segment-table}
+as.data.frame(seg$segments)[, c(
+  "CHROM", "segment_id", "Start", "End", "Length_bp",
+  "SNP_number", "Observed_SNP_number", "Viterbi", "State"
+)]
+```
+
+染色体首尾没有标记的区域会被划入第一个/最后一个片段。每条染色体的片段满足：
+
+- 第一段 `Start = 1`；
+- 最后一段 `End = L`；
+- 后一段 `Start = 前一段 End + 1`；
+- `sum(Length_bp) = L`。
+
+```{r checks}
+s <- seg$segments
+c(
+  first_start = s$Start[1],
+  last_end = s$End[nrow(s)],
+  total_length = sum(s$Length_bp),
+  chromosome_length = seg$chr_length$Length[1],
+  contiguous = all(s$Start[-1] == s$End[-nrow(s)] + 1)
+)
+```
+
+# 小片段处理
+
+`min_length` 以下的片段会按 `ALGORITHM.md` 的规则合并、切分或重跑 HMM。最多执行 2 轮；仍无法处理的片段保留并给出 WARNING。
+
+把 `min_length` 设得较大可以看到小片段整合效果：
+
+```{r min-length}
+seg2 <- segment_detection(sites, min_length = 5e6)
+as.data.frame(seg2$segments)[, c(
+  "Start", "End", "Length_bp", "Viterbi", "State"
+)]
+```
+
+在这个示例中，较短的供体片段和末端片段被并入轮回亲本背景。

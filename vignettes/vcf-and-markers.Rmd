@@ -1,0 +1,65 @@
+---
+title: "VCF Input and Informative Markers"
+output: rmarkdown::html_vignette
+vignette: >
+  %\VignetteIndexEntry{VCF Input and Informative Markers}
+  %\VignetteEngine{knitr::rmarkdown}
+  %\VignetteEncoding{UTF-8}
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(collapse = TRUE, comment = "#>")
+```
+
+# 读取 VCF
+
+```{r read}
+library(BCIntrog)
+vcf <- system.file("extdata", "Demo.vcf.gz", package = "BCIntrog")
+dat <- read_vcf(vcf)
+dat
+```
+
+`read_vcf()` 返回一个 `donor_vcf` 对象：
+
+- `sites`：CHROM、POS、REF、ALT；
+- `gt`：原始 GT 字符矩阵；
+- `gq`：GQ 数值矩阵，或 `NULL`；
+- `samples`、`has_gq`、`chrom_order` 等元数据。
+
+默认只保留双等位记录；SNP 和 indel 都可以作为标记。多等位记录会被删除。
+
+# GQ 缺失的处理
+
+- 如果 VCF 完全没有 GQ 字段，`read_vcf()` 给出 WARNING，并令 `gq = NULL`。
+- 如果 GQ 字段存在、但个别亲本位点 GQ 缺失，`select_site()` 会删除这些位点并给出 WARNING。
+- 如果某个亲本的 GQ 全部缺失，则跳过该亲本的 GQ 过滤并给出 WARNING。
+- 后代的 GQ 不参与过滤；后代缺失 GT 保留为 `Genotype = NA`，HMM 将其视为无信息观测。
+
+# 筛选信息标记并判定后代基因型
+
+```{r select}
+sites <- select_site(
+  dat,
+  donor = "9172",
+  recurrent = "Y633",
+  offspring = "WS100",
+  GQ = 20
+)
+sites
+table(sites$Genotype, useNA = "always")
+```
+
+`Genotype` 的取值：
+
+- `D`：后代基因型与供体亲本一致；
+- `R`：后代基因型与轮回亲本一致；
+- `H`：后代为杂合；
+- `NA`：缺失或无法判定。
+
+输出列名使用实际样本名，例如 `9172.GT`、`Y633.GT`、`WS100.GT`。`select_site()` 还会把 `donor`、`recurrent`、`offspring`、`chrom_order` 和过滤计数保存为属性，供后续函数使用。
+
+```{r attrs}
+attr(sites, "n_summary")
+attr(sites, "donor")
+```

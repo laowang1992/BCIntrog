@@ -1,0 +1,88 @@
+---
+title: "Summary Statistics and Visualization"
+output: rmarkdown::html_vignette
+vignette: >
+  %\VignetteIndexEntry{Summary Statistics and Visualization}
+  %\VignetteEngine{knitr::rmarkdown}
+  %\VignetteEncoding{UTF-8}
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(collapse = TRUE, comment = "#>")
+```
+
+# 准备结果
+
+```{r prepare}
+library(BCIntrog)
+vcf <- system.file("extdata", "Demo.vcf.gz", package = "BCIntrog")
+dat <- read_vcf(vcf)
+sites <- select_site(dat, "9172", "Y633", "WS100", GQ = 20)
+seg <- segment_detection(sites, min_length = 2e5)
+```
+
+# 统计汇总
+
+```{r summary}
+sm <- summary(seg)
+sm
+```
+
+`summary()` 返回一个 `summary_donor_segments` 对象，包含：
+
+- `overall`：总体长度和比例；
+- `by_state`：按 D/R/H/Uninformative 汇总；
+- `by_chrom`：按染色体汇总；
+- `formulas`：公式说明。
+
+```{r overall}
+as.data.frame(sm$overall)
+```
+
+```{r by-state}
+as.data.frame(sm$by_state)
+```
+
+主指标使用染色体总长度 `L_total` 作为分母：
+
+```text
+donor_genome_equivalent    = (L_D + 0.5 * L_H) / L_total
+recurrent_recovery_allelic = (L_R + 0.5 * L_H) / L_total
+```
+
+同时报告纯合口径 `recurrent_recovery_homozygous = L_R / L_total`。
+
+# 可视化
+
+```{r plot, fig.width=10, fig.height=4}
+p <- visualization(
+  seg,
+  chr = "scaffoldA03",
+  label = "A03"
+)
+p
+```
+
+图中：
+
+- 灰色条为染色体背景，代表轮回亲本背景；
+- 红色片段为供体（D）；
+- 绿色片段为杂合（H）；
+- 短竖线为观测标记，按 D/R/H 着色；
+- 图例显示轮回亲本、Heterozygous 和供体。
+
+`chr` 用于选择染色体及顺序；`label` 用于设置显示名称。若 `label` 比 `chr` 长，多出的标签会被忽略并给出 WARNING；若更短，不足的名称用原染色体名补齐。指定不存在的染色体时会报错。
+
+也可以直接保存图片：
+
+```{r save, eval=FALSE}
+visualization(
+  seg,
+  chr = "scaffoldA03",
+  label = "A03",
+  file = "genome_segments.png",
+  width = 10,
+  height = 4,
+  dpi = 300
+)
+```

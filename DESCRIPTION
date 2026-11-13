@@ -1,0 +1,31 @@
+Package: BCIntrog
+Type: Package
+Title: Identify Donor-Derived Introgression Segments in Backcross Populations
+Version: 0.1.0
+Authors@R:
+    person("Pengfei", "Wang", email = "wangpf0608@126.com", role = c("aut", "cre"))
+Description: An R package for identifying donor-parent-derived genomic segments in
+    plant backcross populations from whole-genome resequencing VCF data. It
+    filters parental informative markers, runs a three-state hidden Markov model
+    (donor homozygous, recurrent homozygous, and heterozygous), detects
+    introgressed segments, summarizes donor and recurrent genome proportions,
+    and generates genome-wide visualizations.
+License: GPL-3
+Encoding: UTF-8
+Depends:
+    R (>= 4.1.0)
+Imports:
+    vcfR,
+    dplyr,
+    tibble,
+    rlang,
+    ggplot2,
+    cowplot
+Suggests:
+    testthat (>= 3.0.0),
+    knitr,
+    rmarkdown,
+    ggrastr
+Config/testthat/edition: 3
+VignetteBuilder: knitr
+Config/roxygen2/version: 8.1.1

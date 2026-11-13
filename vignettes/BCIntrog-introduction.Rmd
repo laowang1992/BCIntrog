@@ -1,0 +1,78 @@
+---
+title: "BCIntrog: Introduction"
+output: rmarkdown::html_vignette
+vignette: >
+  %\VignetteIndexEntry{BCIntrog: Introduction}
+  %\VignetteEngine{knitr::rmarkdown}
+  %\VignetteEncoding{UTF-8}
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(collapse = TRUE, comment = "#>")
+```
+
+# 软件简介
+
+BCIntrog 用于从植物回交后代的全基因组重测序 VCF 中鉴定供体亲本来源的基因组片段。核心模型是三个遗传状态：
+
+- **D**：供体亲本纯合型
+- **R**：轮回亲本纯合型
+- **H**：杂合型
+
+包的处理流程为：
+
+1. `read_vcf()` 读取 VCF/VCF.GZ，提取位点、GT 和 GQ。
+2. `select_site()` 筛选双亲相反纯合的双等位标记，并按 GQ 过滤，判定后代 D/R/H。
+3. `segment_detection()` 按染色体运行三状态 HMM，识别片段并处理小片段。
+4. `summary()` 汇总供体基因组当量和轮回亲本背景恢复率。
+5. `visualization()` 绘制全基因组标记和片段分布图。
+
+# 快速开始
+
+包内提供一个小的示例 VCF，包含供体 `9172`、轮回亲本 `Y633` 和后代 `WS100`：
+
+```{r quick-start}
+library(BCIntrog)
+
+vcf <- system.file("extdata", "Demo.vcf.gz", package = "BCIntrog")
+dat <- read_vcf(vcf)
+dat
+
+sites <- select_site(
+  dat,
+  donor = "9172",
+  recurrent = "Y633",
+  offspring = "WS100",
+  GQ = 20
+)
+sites
+
+seg <- segment_detection(sites, min_length = 2e5)
+seg
+
+sm <- summary(seg)
+sm
+```
+
+也可以一键运行完整流程：
+
+```{r one-step}
+res <- run_analysis(
+  vcf,
+  donor = "9172",
+  recurrent = "Y633",
+  offspring = "WS100",
+  min_length = 2e5
+)
+res
+```
+
+# 输出约定
+
+- 片段使用 **1-based 闭区间** `[Start, End]`。
+- 相邻片段不重叠：后一段 `Start = 前一段 End + 1`。
+- 片段长度 `Length_bp = End - Start + 1`，所有片段长度之和等于染色体长度。
+- `Viterbi` 为 D/R/H/NA；`State` 为供体名、轮回亲本名、`Heterozygous` 或 `Uninformative`。
+- 统计分母为染色体总长度 `L_total`；同时报告供体基因组当量和轮回亲本背景恢复率。
+
+更多细节请参阅其他 vignettes。
