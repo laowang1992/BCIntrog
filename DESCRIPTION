@@ -19,8 +19,7 @@ Imports:
     dplyr,
     tibble,
     rlang,
-    ggplot2,
-    cowplot
+    ggplot2 (>= 3.5.0)
 Suggests:
     testthat (>= 3.0.0),
     knitr,

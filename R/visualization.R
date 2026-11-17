@@ -220,12 +220,44 @@ visualization <- function(data, chr = NULL, label = NULL,
       limits = c(0, x_max),
       expand = ggplot2::expansion(mult = c(0.01, 0.01))
     ) +
+    ggplot2::guides(
+      x = ggplot2::guide_axis(cap = TRUE),
+      y = ggplot2::guide_axis(cap = TRUE),
+      colour = ggplot2::guide_legend(override.aes = list(linewidth = 3))
+    ) +
     ggplot2::labs(x = NULL, y = NULL) +
-    cowplot::theme_half_open(font_size = 12) +
     ggplot2::theme(
-      legend.position = "top",
-      axis.text = ggplot2::element_text(colour = "black"),
-      axis.title = ggplot2::element_text(face = "bold")
+      # 整体背景：透明
+      plot.background   = ggplot2::element_rect(fill = "transparent", color = NA),
+      panel.background  = ggplot2::element_rect(fill = "transparent", color = NA),
+      panel.border      = ggplot2::element_blank(),
+
+      # 网格线：仅保留 x 方向主网格线
+      panel.grid.major.x = ggplot2::element_line(color = "grey70", linetype = "dashed", linewidth = 0.5),
+      panel.grid.major.y = ggplot2::element_blank(),
+      panel.grid.minor   = ggplot2::element_blank(),
+
+      # 坐标轴线：仅保留左侧和底部
+      axis.line         = ggplot2::element_line(color = "black", linewidth = 0.5),
+
+      # 刻度线：保留
+      axis.ticks        = ggplot2::element_line(color = "black", linewidth = 0.5),
+      axis.ticks.length = ggplot2::unit(0.15, "cm"),
+
+      # 文字
+      text              = ggplot2::element_text(size = 14, family = ""),
+      axis.text         = ggplot2::element_text(size = 14 * 0.8, color = "black"),
+      axis.title        = ggplot2::element_text(size = 14),
+      plot.title        = ggplot2::element_text(size = 14 * 1.2, face = "bold", hjust = 0),
+      plot.subtitle     = ggplot2::element_text(size = 14 * 0.9),
+      plot.caption      = ggplot2::element_text(size = 14 * 0.8),
+
+      # 图例
+      legend.position   = "top",
+      legend.background = ggplot2::element_blank(),
+      legend.key        = ggplot2::element_blank(),
+      legend.text       = ggplot2::element_text(size = 14 * 0.8),
+      legend.title      = ggplot2::element_text(size = 14)
     )
 
   if (!is.null(file)) {
