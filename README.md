@@ -1,10 +1,10 @@
 # BCIntrog
 
-BCIntrog is an R package for identifying donor-parent-derived genomic segments in plant backcross breeding populations. It screens parental informative markers from whole-genome resequencing VCF data, infers offspring genotypes with a three-state hidden Markov model (HMM), and detects introgressed donor segments.
+BCIntrog (Back-Cross Introgression) is an R package for identifying donor-parent-derived genomic segments in plant backcross breeding populations. It screens parental informative markers from whole-genome resequencing VCF data, infers offspring genotypes with a three-state hidden Markov model (HMM), and detects introgressed donor segments.
 
 ## Features
 
-- Read VCF/VCF.GZ and extract GT, GQ, CHROM, POS, REF and ALT.
+- Read VCF/VCF.GZ and extract CHROM, POS, REF, ALT, GT and GQ.
 - Select biallelic markers where the donor and recurrent parents are homozygous for opposite alleles (SNPs and indels are both allowed).
 - Filter low-quality markers by parental GQ (default `GQ > 20`).
 - Call offspring genotypes as D (donor homozygous), R (recurrent homozygous), H (heterozygous) or `NA`.
@@ -25,23 +25,33 @@ devtools::install_github("laowang1992/BCIntrog")
 ```r
 library(BCIntrog)
 
+# read vcf file
 vcf <- system.file("extdata", "Demo.vcf.gz", package = "BCIntrog")
-
 dat <- read_vcf(vcf)
+
+# select informative parental markers and call offspring genotypes
 sites <- select_site(
   dat,
-  donor = "9172",
-  recurrent = "Y633",
-  offspring = "WS100",
+  donor = "9172",       # "9172" is the name of donor parent
+  recurrent = "Y633",   # "Y633" is the name of recurrent parent
+  offspring = "WS100",  # "WS100" is the name of offspring
   GQ = 20
 )
+
+# identify genomic segments from HMM-inferred genetic states
 seg <- segment_detection(
   sites,
-  min_length = 500000,
-  cross_length = 10000000
+  min_length = 650000,     # minimum segment length 
+  cross_length = 10000000  # expected distance between state changes
 )
 summary(seg)
-p <- visualization(seg)
+
+# visualization
+p <- visualization(seg, 
+                   chr = c("scaffoldA01", "scaffoldA02", "scaffoldA03", "scaffoldA04", "scaffoldA05", 
+                           "scaffoldA06", "scaffoldA07", "scaffoldA08", "scaffoldA09", "scaffoldA10"), # selected chromosome to display
+                   label = c("A01", "A02", "A03", "A04", "A05", "A06", "A07", "A08", "A09", "A10"))    # label of selected chromosome
+p
 ```
 
 Or run the complete pipeline:
@@ -57,9 +67,11 @@ summary(res$segments)
 res$plot
 ```
 
+![Demo figure](docs/images/Demo.segment.png)
+
 ## Input requirements
 
-- The VCF must contain `GT`; `GQ` is optional. If GQ is completely absent, a WARNING is issued and GQ filtering is skipped.
+- The VCF must contain `GT`, `GQ` is optional. If GQ is completely absent, a WARNING is issued and GQ filtering is skipped.
 - Parents should be highly homozygous diploids; only biallelic markers with opposite homozygous parental genotypes are retained.
 - Multiple chromosomes and contigs are supported. The default order follows the first appearance in the VCF.
 - Demo data are in `data/Demo.vcf.gz`; the package includes `inst/extdata/Demo.vcf.gz` for examples.
